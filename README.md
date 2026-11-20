@@ -16,7 +16,7 @@ Claude Code로 바이브코딩해서 만들었고 실제 업무에 쓰면서 기
 
 - **AI 쪼개기**: 업무 제목과 메모를 보내면 5~8개 하위 할일로 나눠 보여 줍니다. 마음에 드는 것만 골라 넣습니다
 - **마감일 탭**: 오늘, 이번주, 지난 마감, 전체, 완료로 나눠 봅니다
-- **알림**: 정한 시각에 윈도우 알림이 뜹니다. 급한 일은 확인을 누를 때까지 화면에 남습니다
+- **알림**: 정한 시각에 컴퓨터 알림이 뜹니다. 급한 일은 확인을 누를 때까지 화면에 남습니다
 - **아침 브리핑**: 매일 아침 오늘 마감인 일과 밀린 일을 창으로 띄웁니다
 - **메모**: 할일마다 메모를 달 수 있고 쪼갤 때 메모가 설명으로 같이 넘어갑니다
 - **경험치·레벨**: 할일을 끝낼 때마다 XP가 쌓이고 레벨이 오릅니다
@@ -35,13 +35,13 @@ Claude Code로 바이브코딩해서 만들었고 실제 업무에 쓰면서 기
 - 화면은 프레임워크 없이 HTML, CSS, JavaScript로 만들었습니다
 - 데이터는 PC 안의 JSON 파일에 저장합니다. 서버는 이 PC(127.0.0.1)에서만 열립니다
 - AI 쪼개기는 PC에 로그인된 Claude Code CLI(`claude -p`)를 불러 처리합니다. 코드에 API 키가 없습니다
-- 테스트 80개 (`npm test`)
+- 테스트 86개 (`npm test`)
 
 ## 시작하기
 
 필요한 것
 
-- Windows 10/11 (알림과 아침 브리핑은 Windows 전용입니다)
+- Windows 10/11 또는 macOS ([맥에서 쓰기](#맥에서-쓰기) 참고)
 - Node.js 18 이상
 - Claude Code CLI 설치와 로그인 (쪼개기 버튼에 필요합니다)
 
@@ -51,7 +51,7 @@ cd todo-splitter
 node server.js
 ```
 
-브라우저에서 `http://localhost:4321`이 열립니다. Windows에서는 `start.bat`을 더블클릭해도 됩니다.
+브라우저에서 `http://localhost:4321`이 열립니다. Windows에서는 `start.bat`, 맥에서는 `start.command`를 더블클릭해도 됩니다.
 
 ## 켜고 끄기
 
@@ -61,6 +61,16 @@ node server.js
 주소는 `http://localhost:4321`입니다. 포트가 이미 쓰이고 있으면 4322, 4323… 순으로 비어 있는 번호를 찾아갑니다.
 
 알림을 받으려면 서버가 켜져 있어야 합니다. 윈도우를 켤 때 자동으로 띄우려면 [자동 실행](#자동-실행)을 보세요.
+
+## 맥에서 쓰기
+
+맥에서도 같은 방법으로 받아서 씁니다. 할일, 쪼개기, 알림, 아침 브리핑이 모두 됩니다.
+
+- **켜기**: Finder에서 `start.command`를 더블클릭하면 터미널이 열리고 브라우저가 뜹니다. 처음에는 "확인되지 않은 개발자" 경고가 나올 수 있는데, 파일을 우클릭해 `열기`를 누르면 됩니다. 더블클릭해도 안 열리면 터미널에서 `chmod +x start.command`를 한 번 실행하세요
+- **끄기**: 터미널 창을 닫거나 `Ctrl+C`를 누릅니다
+- **알림**: 보통·천천히 할일은 화면 오른쪽 위 알림으로, 급한 할일은 `확인`·`10분 뒤` 버튼이 있는 창으로 뜹니다. 알림이 안 보이면 `시스템 설정 > 알림`에서 `스크립트 편집기` 알림을 허용하세요
+- **자동 실행**: `시스템 설정 > 일반 > 로그인 항목`에 `start.command`를 추가합니다. 로그인할 때 터미널 창이 함께 열립니다
+- **아침 브리핑**: 터미널에서 `sh tools/install-mac-briefing.sh`를 한 번 실행하면 매일 09:00과 로그인 때 뜹니다. 그만두려면 `--remove`를 붙여 다시 실행하세요
 
 ## 쪼개기 버튼
 
@@ -206,12 +216,14 @@ lib/splitter.js   claude CLI 호출 + 응답 해석
 lib/worklog.js    완료 항목 → 마크다운, 데일리 노트 병합
 lib/game.js       XP·레벨 규칙과 장부 (서버와 브라우저가 같이 씀)
 lib/notifier.js   알림 시각 감시 루프, 울림 표시 관리
-lib/popup.js      Windows 토스트·창 팝업 (PowerShell 5.1 경유)
+lib/popup.js      알림 팝업 (Windows는 PowerShell 5.1, 맥은 osascript)
 public/           화면 (index.html, style.css, app.js)
 tools/make-icon.js  픽셀 아이콘(icon.ico) 생성기
-tools/briefing.js   아침 브리핑 창 (briefing.vbs가 창 없이 실행)
+tools/briefing.js   아침 브리핑 창 (Windows는 briefing.vbs가 창 없이 실행)
+tools/install-mac-briefing.sh  맥 아침 브리핑 자동 실행 등록 (launchd)
 start-silent.vbs  창 없이 서버 실행 (자동 실행용, UTF-16LE로 저장할 것)
 stop.bat          서버 종료 (stop.ps1 호출)
+start.command     맥 실행 파일 (Finder에서 더블클릭)
 config.example.json  외부 웹페이지 허용 주소 예시 (config.local.json으로 복사해 씀)
 docs/             README용 화면 캡처
 test/             단위 테스트
@@ -223,7 +235,7 @@ test/             단위 테스트
 npm test
 ```
 
-날짜 분류, 데일리 노트 병합, AI 응답 해석, 알림 시각 판정, XP 계산 76개를 검사합니다.
+날짜 분류, 데일리 노트 병합, AI 응답 해석, 알림 시각 판정, XP 계산, 맥 알림 스크립트 86개를 검사합니다.
 
 ## 손보고 싶을 때
 

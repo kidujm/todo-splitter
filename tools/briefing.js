@@ -4,8 +4,8 @@
  * ── 이 파일이 하는 일 ─────────────────────────────
  * 아침 브리핑 창: 오늘 마감인 할일, 밀린 할일, 다음 일정 4개를 창 하나로 보여 준다.
  *
- * 서버와 따로 도는 작은 프로그램이다. 작업 스케줄러가 매일 09:00과 로그온 때
- * briefing.vbs(검은 창 없이 실행해 주는 껍데기)를 통해 이 파일을 실행한다.
+ * 서버와 따로 도는 작은 프로그램이다. 윈도우는 작업 스케줄러가 매일 09:00과 로그온 때
+ * briefing.vbs(검은 창 없이 실행해 주는 껍데기)를 통해 실행하고, 맥은 cron 등으로 직접 실행한다.
  * 하루에 한 번만 띄운다. 바로 다시 보려면: node tools/briefing.js --force
  */
 
@@ -58,10 +58,19 @@ function buildText(todos, today) {
     out.push('', '다음 일정');
     upcoming.forEach((t) => out.push(`${dayLabel(t.due)} ${t.title}`));
   }
-  return out.join('\r\n').slice(0, MAX_TEXT); // 윈도우 글상자는 줄바꿈으로 \r\n을 쓴다
+  return out.join('\n').slice(0, MAX_TEXT);
 }
 
-/** 브리핑 창: 제목, 스크롤되는 글상자, [할일 앱 열기] [확인]. 부품은 popup.js의 ps를 쓴다. */
+/** 맥 브리핑 창. argv: [본문, 앱 주소]. '할일 앱 열기'를 누르면 브라우저로 연다. */
+const MAC_SCRIPT = [
+  'on run argv',
+  'activate', // 다른 창 뒤에 숨지 않게 앞으로
+  'set r to display dialog (item 1 of argv) with title "할일 쪼개기 아침 브리핑" buttons {"할일 앱 열기", "확인"} default button "확인" giving up after 3600',
+  'if button returned of r is "할일 앱 열기" then open location (item 2 of argv)',
+  'end run',
+];
+
+/** 윈도우 브리핑 창: 제목, 스크롤되는 글상자, [할일 앱 열기] [확인]. 부품은 popup.js의 ps를 쓴다. */
 function windowScript(text) {
   const { ps, psQuote, INK, LEMON, CREAM } = popup;
   return [
@@ -76,7 +85,7 @@ function windowScript(text) {
     `$box.ForeColor = ${ps.color(CREAM)}`,
     `$box.Font = ${ps.font(11)}`,
     ...ps.place('box', [24, 64, 520, 380]),
-    `$box.Text = ${psQuote(text)}`,
+    `$box.Text = ${psQuote(text.replace(/\r?\n/g, '\r\n'))}`, // 윈도우 글상자는 줄바꿈으로 \r\n을 쓴다
     '$f.Controls.Add($box)',
 
     ...ps.button('open', '할일 앱 열기', [318, 460, 120, 36], [`$open.Add_Click({ Start-Process ${psQuote(APP_URL)}; $f.Close() })`]),
@@ -104,11 +113,16 @@ function main() {
   // windowsHide는 쓰지 않는다: 숨김 시작 값을 물려받아 창까지 안 보이게 된다.
   // node가 이미 숨은 콘솔(briefing.vbs)에서 돌기 때문에 PowerShell 콘솔도 보이지 않는다.
   const err = fs.openSync(LOG_FILE, 'w');
-  const child = popup.runPowerShell(windowScript(text), { stdio: ['ignore', 'ignore', err] });
+  const opts = { stdio: ['ignore', 'ignore', err] };
+  const child =
+    process.platform === 'darwin'
+      ? popup.runAppleScript(MAC_SCRIPT, [`오늘 꼭 해야 합니다\n\n${text}`, APP_URL], opts)
+      : popup.runPowerShell(windowScript(text), opts);
+  child.on('error', (e) => fs.appendFileSync(LOG_FILE, `\n창을 띄우지 못했습니다: ${e.message}\n`));
   child.on('exit', (code) => fs.appendFileSync(LOG_FILE, `\nexit ${code} ${new Date().toISOString()}\n`));
 }
 
 // 직접 실행했을 때만 main()을 돈다. 테스트에서 require로 불러올 때는 창을 띄우지 않는다.
 if (require.main === module) main();
 
-module.exports = { buildText, dayLabel, windowScript };
+module.exports = { buildText, dayLabel, windowScript, MAC_SCRIPT };

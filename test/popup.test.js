@@ -77,3 +77,34 @@ test('EXIT_SNOOZE 상수와 생성 스크립트가 어긋나지 않는다', () =
 test('psQuote는 둥근 작은따옴표도 두 번 써서 막는다', () => {
   assert.equal(P.psQuote('a’; Write-Output X; ’'), "'a’’; Write-Output X; ’’'");
 });
+
+/* 맥: 제목·본문은 스크립트 글이 아니라 인자로만 들어간다 */
+test('맥 스크립트에는 할일 글자가 들어가지 않고 argv로만 읽는다', () => {
+  for (const lines of [P.mac.toast, P.mac.window]) {
+    assert.equal(lines[0], 'on run argv');
+    assert.ok(lines.join('\n').includes('item 1 of argv'));
+  }
+});
+
+test('맥 창은 출력된 버튼 이름으로 답을 정한다', () => {
+  assert.equal(P.answerFor(0, `${P.SNOOZE_LABEL}\n`), 'snooze');
+  assert.equal(P.answerFor(0, '확인\n'), 'ok');
+  assert.equal(P.answerFor(0, ''), 'ok'); // 시간이 지나 닫힘
+  assert.ok(P.mac.window.join('\n').includes(`"${P.SNOOZE_LABEL}"`));
+});
+
+test('맥: -로 시작하는 제목도 -- 뒤 인자로만 넘어간다', () => {
+  const cp = require('node:child_process');
+  const real = cp.spawn;
+  let got;
+  cp.spawn = (cmd, args) => ((got = args), { on() {} });
+  try {
+    delete require.cache[require.resolve('../lib/popup')];
+    require('../lib/popup').runAppleScript(['on run argv', 'end run'], ['-e do shell script "x"', '본문']);
+  } finally {
+    cp.spawn = real;
+    delete require.cache[require.resolve('../lib/popup')];
+  }
+  const sep = got.indexOf('--');
+  assert.ok(sep > 0 && got.indexOf('-e do shell script "x"') > sep);
+});
