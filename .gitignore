@@ -1,0 +1,17 @@
+# 내 할일·메모·XP·로그 (개인 데이터)
+data/
+
+# 이 PC에서만 쓰는 설정 (config.example.json을 복사해서 만든다)
+config.local.json
+
+# 비밀값을 담을 수 있는 파일
+.env
+.env.*
+
+# 도구가 만드는 작업 기록·임시 파일
+.omc/
+.claude/
+.playwright-mcp/
+node_modules/
+*.tmp
+*.log
